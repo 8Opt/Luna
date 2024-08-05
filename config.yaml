@@ -1,0 +1,23 @@
+loader: 
+  chunk_size: 1000
+  chunk_overlap: 20
+
+gen_model: 
+  provider: groq
+  settings: 
+    model: llama3-8b-8192
+    api_key: None               # change to `google_api_key` if provider is `gemini`, block if using Ollama
+    temperature: 1.
+
+embedding: 
+  provider: gemini
+  settings: 
+    model: models/embedding-001,
+  persist_directory: ./chroma-db
+  collection_name: rag-chroma
+
+vision_model: 
+  provider: sentence-transformers    # TODO: provider can be CLIP or HuggingFace (download directly from hub).
+  settings: 
+    model_id: clip-ViT-B-32
+    top_k: 5
