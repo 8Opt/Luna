@@ -1,3 +1,13 @@
+"""
+Objects in this file is in charge of two things: 
+
+    1. Embedding data with relevant model. 
+    2. Store data with relevant vector database. 
+        1. For textual data: Luna stores it in ChromaDB. 
+        2. For image data: Luna stores it in FAISS (working great with .bin file)
+
+"""
+
 from typing import Union, List
 
 from langchain_core.documents import Document

@@ -1,6 +1,8 @@
+import os
+from typing import Union, Any, List
 from abc import ABC, abstractmethod
 
-import requests
+import cv2
 
 class BaseFoundationModel(ABC): 
 
@@ -11,32 +13,89 @@ class BaseFoundationModel(ABC):
 
 class BaseMediaReader(ABC): 
     SUPPORTED_FORMAT= {
-        "URL": ["youtube"], 
+        "URL": ["https://www.youtube.com/watch?"], 
         "MEDIA": ["mp4", "MP4"]
     }
 
+
+    def __init__(self, 
+                lang:str='en',  # Get caption based on language
+                to_local_dir: Union[str, None]='./storage', # Save to local dir
+                save_frames:bool=True, 
+                save_document:bool=True): 
+        self.lang = lang
+
+        if to_local_dir is not None:
+            if not os.path.exists(to_local_dir): 
+                os.makedirs(to_local_dir)
+
+            self.to_local_dir = to_local_dir
+        else: 
+            self.to_local_dir = './'
+
+        self.save_frames = save_frames
+        self.save_document = save_document
+
     @abstractmethod
-    def get_audio(self, file): 
+    def get_audio(self, payload): 
         ...
 
     @abstractmethod
-    def get_transcript(self, file): 
+    def get_transcript(self, payload) -> str: 
         ...
 
     @abstractmethod
-    def lazy_read(self, file): 
+    def lazy_read(self, payload): 
         ...
 
-    def valid_url(self, payload) -> bool: 
-        url_patterns = self.SUPPORTED_FORMAT["URL"]
-        for pattern in url_patterns: 
-            if pattern in payload \
-                and requests.get(url=payload).status_code == "200": 
-                return True
-            
-        return False
+    def get_frames(self, 
+                   payload, 
+                   selected_points:Union[List[int], None], 
+                   time_interval:int=1,
+                   ): 
     
-    def valid_media(self, payload) -> bool: 
-        media_patterns = self.SUPPORTED_FORMAT("MEDIA")
-        file_type = payload.split('.')[-1]
-        return True if file_type in media_patterns else False
+        frames = []
+        points = selected_points
+        cap = cv2.VideoCapture(payload)
+
+        # Used as counter variable 
+
+        match points:
+            case None: 
+                print('none')
+                while True:
+                    
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+
+                    # Calculate the current timestamp (assuming FPS = 30)
+                    timestamp = int(cap.get(cv2.CAP_PROP_POS_MSEC) / 1000)
+
+                    # Check if the current timestamp matches the desired interval
+                    if timestamp % time_interval == 0:
+                            frames.append(frame)
+
+                            points.pop(0)
+
+            case List:
+                print('list')
+                while True:
+                    
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+
+                    # Calculate the current timestamp (assuming FPS = 30)
+                    timestamp = int(cap.get(cv2.CAP_PROP_POS_MSEC) / 1000)
+
+                    # Check if the current timestamp matches the desired interval and selected_points
+                    if timestamp % time_interval == 0:
+                        try: 
+                            now = points[0]
+                            if timestamp == now: 
+                                frames.append(frame)
+                                points.pop(0)
+                        except: 
+                            break
+        return frames     
