@@ -10,7 +10,6 @@ import tempfile
 
 import cv2
 import requests
-import ffmpeg
 
 from pytubefix import YouTube
 from pytubefix.cli import on_progress
@@ -146,12 +145,10 @@ class YoutubeReader(BaseMediaReader):
                     frames = self.get_frames(temp_yt_file, 
                                             )
 
-
         if self.save_document: 
                 file_path = os.path.join(self.to_local_dir, self.metadata.name + '.txt')
                 with open(file_path, "w") as file:
                     file.write(document)
-
 
         if self.save_frames: 
             count = 0
@@ -189,7 +186,6 @@ class YoutubeReader(BaseMediaReader):
         return False
     
 
-
 class MP4Reader(BaseMediaReader): 
     def __init__(self, 
                  lang, 
@@ -198,23 +194,45 @@ class MP4Reader(BaseMediaReader):
         ...
 
     def lazy_read(self, payload):
-        return super().lazy_read(payload)
+        document = self.get_transcript(payload)
+        frames = self.get_frames(payload)
+
+        if self.save_document: 
+                file_path = os.path.join(self.to_local_dir, self.metadata.name + '.txt')
+                with open(file_path, "w") as file:
+                    file.write(document['text'])
+
+        if self.save_frames: 
+            count = 0
+            img_dir = os.path.join(self.to_local_dir, 'images') 
+            if not os.path.exists(img_dir): 
+                os.makedirs(img_dir)
+
+            for frame in frames: 
+                img_path = os.path.join(self.to_local_dir, "images", f'frame_{count}.jpg')
+                cv2.imwrite(img_path, frame)
+                count +=1
+
+        return {
+                    'document': document, 
+                    'frames': frames
+                }
+    
     
     def get_audio(self, payload):
         return super().get_audio(payload)
     
     def get_transcript(self, payload) -> str:
-        return super().get_transcript(payload)
+        import whisper
+
+
+        model = whisper.load_model("base")
+        result = model.transcribe(payload)
+        return result
     
-    def __convert_mp4_to_wav(self, input_file, output_file): 
-        from ffmpeg import input, output
-        """
-            Libraries that support `speech to text`, most of them, utilize .wav file
-        """
-        ...
-
-
     def __valid_media(self, payload) -> bool: 
         media_patterns = self.SUPPORTED_FORMAT("MEDIA")
-        file_type = payload.split('.')[-1]
-        return True if file_type in media_patterns else False
+        for pattern in media_patterns: 
+            if payload.endswith(pattern): 
+                return True
+        return False

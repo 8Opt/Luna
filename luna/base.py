@@ -59,10 +59,8 @@ class BaseMediaReader(ABC):
         cap = cv2.VideoCapture(payload)
 
         # Used as counter variable 
-
         match points:
             case None: 
-                print('none')
                 while True:
                     
                     ret, frame = cap.read()
@@ -79,7 +77,6 @@ class BaseMediaReader(ABC):
                             points.pop(0)
 
             case List:
-                print('list')
                 while True:
                     
                     ret, frame = cap.read()

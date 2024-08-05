@@ -1,17 +1,12 @@
 import yaml
+import os
+import logging
+import time
 import pandas as pd 
 from datetime import datetime
 
+# ===== READ/WRITE DATA FORMAT =====
 def read_yaml(file_path):
-  """Reads a YAML file and returns its contents as a dictionary.
-
-  Args:
-    file_path: The path to the YAML file.
-
-  Returns:
-    A dictionary containing the YAML data.
-  """
-
   with open(file_path, 'r') as file:
     data = yaml.safe_load(file)
   return data
@@ -29,3 +24,20 @@ def get_second(time_desc: str,
         return t_second
     except ValueError:
         return None
+    
+
+# ===== LOGGING SYSTEM =====
+def set_logger(filename:str='./log/app.log'):
+    # Create an empty log file if not exist
+    if not os.path.exists(filename):
+        os.mkdir(filename)
+
+    # Set logging config
+    logging.basicConfig(
+                        level=logging.DEBUG,
+                        format='[%(asctime)s] - %(levelname)7s --- %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        filename=filename,
+                        filemode='w'
+                        )
+  
