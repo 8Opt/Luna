@@ -37,6 +37,10 @@ class BaseMediaReader(ABC):
         self.save_document = save_document
 
     @abstractmethod
+    def get_metadata(self, payload): 
+        ...
+
+    @abstractmethod
     def get_audio(self, payload): 
         ...
 
@@ -50,7 +54,7 @@ class BaseMediaReader(ABC):
 
     def get_frames(self, 
                    payload, 
-                   selected_points:Union[List[int], None], 
+                   selected_points:Union[List[int], None]=None, 
                    time_interval:int=1,
                    ): 
     
@@ -74,8 +78,6 @@ class BaseMediaReader(ABC):
                     if timestamp % time_interval == 0:
                             frames.append(frame)
 
-                            points.pop(0)
-
             case List:
                 while True:
                     
@@ -96,3 +98,42 @@ class BaseMediaReader(ABC):
                         except: 
                             break
         return frames     
+    
+class BaseLoader(ABC): 
+
+    def __init__(self, 
+                config,
+                to_local_dir: Union[str, None]='./storage', # Save to local dir
+                  ): 
+        self.config = config
+
+        if to_local_dir is not None:
+            if not os.path.exists(to_local_dir): 
+                os.makedirs(to_local_dir)
+
+            self.to_local_dir = to_local_dir
+        else: 
+            self.to_local_dir = './'
+
+    @abstractmethod
+    def set_vectordb(self, payload, config): 
+        ...
+
+    # def get_vectordb(self): 
+    #     ...
+
+    @abstractmethod
+    def set_retrieval(self, vectorstore): 
+        ...
+
+    @abstractmethod
+    def loading_data(self, payload): 
+        ...
+
+    @abstractmethod
+    def set_embedding(self, config): 
+        ...
+
+    @abstractmethod
+    def get_pipeline(self, payload, config): 
+        ...

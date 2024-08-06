@@ -15,7 +15,7 @@ from pytubefix import YouTube
 from pytubefix.cli import on_progress
 
 from luna.base import BaseMediaReader
-from luna.schema import YoutubeMedia
+from luna.schema import YoutubeMedia, MP4Media
 from luna.utils import dict_to_pd, get_second
 
 
@@ -65,7 +65,7 @@ class YoutubeReader(BaseMediaReader):
 
     def lazy_read(self, payload):
         youtube = self.get_audio(payload)
-        self.metadata = self.__get_metadata(youtube=youtube)
+        self.metadata = self.get_metadata(youtube=youtube)
 
         if not self.lang in self.metadata.captions_lang.values():
             return f"Your chosen language is not provided by the video. Please refer to {self.metadata['captions_lang']}"
@@ -152,12 +152,12 @@ class YoutubeReader(BaseMediaReader):
 
         if self.save_frames: 
             count = 0
-            img_dir = os.path.join(self.to_local_dir, 'images') 
+            img_dir = os.path.join(self.to_local_dir, self.metadata.name) 
             if not os.path.exists(img_dir): 
                 os.makedirs(img_dir)
 
             for frame in frames: 
-                img_path = os.path.join(self.to_local_dir, "images", f'frame_{count}.jpg')
+                img_path = os.path.join(self.to_local_dir, self.metadata.name, f'frame_{count}.jpg')
                 cv2.imwrite(img_path, frame)
                 count +=1
 
@@ -166,7 +166,7 @@ class YoutubeReader(BaseMediaReader):
                     'frames': frames
                 }
     
-    def __get_metadata(self, youtube) -> YoutubeMedia: 
+    def get_metadata(self, youtube) -> YoutubeMedia: 
         metadata = YoutubeMedia(name=youtube.title, 
                                 author=youtube.author, 
                                 description=youtube.description, 
@@ -187,13 +187,13 @@ class YoutubeReader(BaseMediaReader):
     
 
 class MP4Reader(BaseMediaReader): 
-    def __init__(self, 
-                 lang, 
-                 save_wav:bool): 
+    def __init__(self): 
         super().__init__()
         ...
 
     def lazy_read(self, payload):
+        self.metadata = self.get_metadata(payload)
+        print(self.metadata)
         document = self.get_transcript(payload)
         frames = self.get_frames(payload)
 
@@ -204,12 +204,12 @@ class MP4Reader(BaseMediaReader):
 
         if self.save_frames: 
             count = 0
-            img_dir = os.path.join(self.to_local_dir, 'images') 
+            img_dir = os.path.join(self.to_local_dir, self.metadata.name) 
             if not os.path.exists(img_dir): 
                 os.makedirs(img_dir)
 
             for frame in frames: 
-                img_path = os.path.join(self.to_local_dir, "images", f'frame_{count}.jpg')
+                img_path = os.path.join(self.to_local_dir, self.metadata.name, f'frame_{count}.jpg')
                 cv2.imwrite(img_path, frame)
                 count +=1
 
@@ -223,15 +223,22 @@ class MP4Reader(BaseMediaReader):
         return super().get_audio(payload)
     
     def get_transcript(self, payload) -> str:
-        import whisper
-
-
-        model = whisper.load_model("base")
-        result = model.transcribe(payload)
-        return result
+        if self.__valid_media(payload): 
+            import whisper
+            """
+                Internally, the transcribe() method reads the entire file and processes the audio with a sliding 30-second window, 
+                performing autoregressive sequence-to-sequence predictions on each window.
+            """
+            model = whisper.load_model("base")
+            result = model.transcribe(payload)
+            return result
+        return None
     
+    def get_metadata(self, payload):
+        return MP4Media(name=payload)
+
     def __valid_media(self, payload) -> bool: 
-        media_patterns = self.SUPPORTED_FORMAT("MEDIA")
+        media_patterns = self.SUPPORTED_FORMAT["MEDIA"]
         for pattern in media_patterns: 
             if payload.endswith(pattern): 
                 return True
